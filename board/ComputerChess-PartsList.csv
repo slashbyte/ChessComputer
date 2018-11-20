@@ -22,3 +22,4 @@ Qty,Value,Device,Package,Parts,Description,Digikey Part Number
 1,PIZEROW,PIZEROW,RASP_PI_ZERO_BOARD_FULL,PI1,40pin Header,609-4925-ND
 3,RED,LED3MM,LED3MM,"LED1, LED2, LED3",LED,732-5013-ND
 16,TL3305,TL3305,TL3305,"S1, S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12, S13, S14, S15, S16",Switch (5mm board height),EG5354CT-ND
+1,3.7v @ 2AH,LIPO,JST-PH-2,,3.7V Lithium-Ion Battery Rechargeable (Secondary) 2Ah,1528-1857-ND
