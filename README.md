@@ -1,7 +1,7 @@
 # PI Chess Computer
 Modeled after the "Chess Challenger" made in 1978
 
-![GitHub Logo](/3D%20render/image.png)
+![GitHub Logo](/assembly/images/assembly01.png)
 
 ## Authors
 * **Slash/Byte**
