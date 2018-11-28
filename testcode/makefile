@@ -3,7 +3,7 @@
 CC=g++
 CFLAGS=-c -Wall
 LDFLAGS= -lpthread
-SOURCES=main.cpp ht16k33.cpp starburst.cpp
+SOURCES=main.cpp ht16k33.cpp starburst.cpp threadobj.cpp wrapper.cpp frontend.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=test
 
