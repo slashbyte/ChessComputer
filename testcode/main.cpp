@@ -356,24 +356,31 @@ void FrontEnd::begin(void)
     t4.detach();
 }
 
+//undoes the computers move then your move,
+//it then becomes your move again
 void undoMove(FrontEnd &a) //undo move
 {
     a.send_engine("remove"); //I think thats undo
 }
 
+//invoke the engine
 void go(FrontEnd &a) //go Go GO!
 {
     a.send_engine("go");
 }
 
-void newGame(FrontEnd &a) //new game
+//start a new game
+void newGame(FrontEnd &a, int sd) //new game
 {
+	string _sd = "sd " + to_string(sd); //convert search depth to string
     a.send_engine("new");
-    //a.send_engine("force"); //odd things happened....
-    a.send_engine("st 0"); //blitz mode for test, move to level or something
+	a.send_engine(_sd);
+	//a.send_engine("force"); //odd things happened....
+    //a.send_engine("st 0"); //blitz mode for test, move to level or something
     a.send_display("New ");
 }
 
+//get a users move
 bool getMove(FrontEnd &a, int b) //get move from user
 {
     string move = "----";
@@ -408,31 +415,72 @@ bool getMove(FrontEnd &a, int b) //get move from user
 	return 1;
 }
 
+//show the computers move
 void showMove(FrontEnd &a, string b)
 {
     a.send_display(b, 1); //send to display, upper
 }
 
+//clear the display
 void clear(FrontEnd &a) //clear display, fix later
 {
     a.send_display("----"); //would blank be better?
 }
 
-void level(FrontEnd &a) //set level
+//set the engine level
+void level(FrontEnd &a, int &sd) //set level
 {
-    //?
+	uint16_t mState[8];
+	for(int i = 0; i < 8; i++) //save display state
+		mState[i] = a.hwDisplay->memory[i];
+	
+	string _sd = "Lv";
+	if(sd < 10)
+		_sd += "0" + to_string(sd);
+	else
+		_sd += to_string(sd);
+	a.send_display(_sd);
+	while(1)
+	{
+        bool _b = a.is_button();
+        if(_b)
+        {
+            int _c = a.get_button();
+            if(_c == 3) //enter
+			{
+				a.send_engine("sd " + to_string(sd)); //set new level
+				for(int i = 0; i < 8; i++)
+					a.hwDisplay->memory[i] = mState[i]; //renew state
+				a.hwDisplay->update(); //display saved state
+                return;
+			}
+            if(_c == 4) //lv button
+            {
+				sd = 1+(sd%25);
+				if(sd < 10)
+					_sd = "Lv0" + to_string(sd);
+				else
+					_sd = "Lv" + to_string(sd);
+				a.send_display(_sd);
+            }
+        }
+        cpuBreak();
+    }
 }
 
+//request position verification
 void posVer(FrontEnd &a)
 {
     a.send_engine("DUMP");
 }
 
+//ask for a hint
 void hint(FrontEnd &a)
 {
     a.send_engine("hint");
 }
 
+//display error screen
 void error(FrontEnd &a)
 {
 	a.send_display("____"); //clear display
@@ -445,6 +493,7 @@ void error(FrontEnd &a)
 	a.hwDisplay->setBlinkRate(0); //turn off blink
 }
 
+//check led control
 void check(FrontEnd &a, bool b) //map to correct led on hardware
 {
     if(b)
@@ -459,6 +508,7 @@ void check(FrontEnd &a, bool b) //map to correct led on hardware
 	}
 }
 
+//mate led control
 void mate(FrontEnd &a, bool b) //map to correct led on hardware
 {
     if(b)
@@ -473,6 +523,7 @@ void mate(FrontEnd &a, bool b) //map to correct led on hardware
 	}
 }
 
+//flash when mate (the end of the game)
 void mateBlink(FrontEnd &a)
 {
 	a.hwDisplay->setBlinkRate(2); //blink display
@@ -484,7 +535,8 @@ void mateBlink(FrontEnd &a)
 	a.hwDisplay->setBlinkRate(0); //turn off blink
 }
 
-void think(FrontEnd &a) //might remove this latter
+//think screen animation
+void thinkANI(FrontEnd &a)
 {
 	string spinner = "/-\\|";
 	bool _b;
@@ -495,10 +547,17 @@ void think(FrontEnd &a) //might remove this latter
 		a.hwDisplay->update(); //show on display
 		i=(i+1)%4;
 		_b = a.is_engine() | a.is_button(); //break if engine or button
-		a.hwDisplay->delay(100); //increase to ramming speed captain!, affects update
-	}while(!_b); //wait for any-key to be pushed
+		a.hwDisplay->delay(100); //increase to ramming speed captain!, !!affects update!!
+	}while(!_b); //wait for any-key to be pushed	
 }
 
+//generic think screen, no delay in move processing
+void think(FrontEnd &a)
+{
+	a.send_display("****");
+}
+
+//if the engine gives up, display why
 void killScreen(FrontEnd &a, int b, int _delay)
 {
 	string KS[] = {
@@ -518,6 +577,48 @@ void killScreen(FrontEnd &a, int b, int _delay)
 		_b = a.is_button();
 		//cpuBreak();
 	}while(!_b); //wait for any-key to be pushed
+}
+
+//display the fen string on the hw display
+void fen(FrontEnd &a, string b)
+{
+	uint16_t mState[8];
+	for(int i = 0; i < 8; i++) //save display state
+		mState[i] = a.hwDisplay->memory[i];
+	
+	printf("%s\n", b.c_str()); //for debug
+	while(b.length()%4) //stretch to multiple of 4, yeah I don't like it either...
+		b += " ";
+	string::size_type i = 0;
+	a.send_display("FEN-");
+	while(1)
+	{
+        bool _b = a.is_button();
+        if(_b)
+        {
+            int _c = a.get_button();
+            if(_c == 3) //enter, return to play
+			{
+				for(int i = 0; i < 8; i++)
+					a.hwDisplay->memory[i] = mState[i]; //renew state
+				a.hwDisplay->update(); //display saved state
+                return;
+			}
+            if(_c == 7) //pv, advance by 4
+            {
+				if(i < b.length())
+				{
+					for(int j = 0; j < 4; j++)
+						a.hwDisplay->printM(b.at(i+j),j);
+					a.hwDisplay->update();
+					i=i+4;
+				}
+				else
+					a.send_display("-END");
+            }
+        }
+        cpuBreak();
+    }
 }
 
 int main(void)
@@ -546,7 +647,7 @@ int main(void)
     HT.print("Chess Challenger", 100);
     HT.print("----");
 	
-	//start the io threads, engine input/output & button/display IO, all intendant
+	//start the io threads, engine input/output & button/display IO, all independent
 	test.begin(); //not sure if that was the best decision, but it works well
 	
 	//helper variables for game play logic
@@ -555,6 +656,7 @@ int main(void)
     bool NEWGAME = 1;
     const bool WHITE = 0;
     const bool BLACK = 1;
+	int searchDepth = 20;
 	
     while(1) //a for loop that will run till the end of time!, or till the batteries die...
     {
@@ -562,35 +664,39 @@ int main(void)
         if(_b) //if there was a button press
         {
             int _c = test.get_button(); //get button
-            if(_c == 0) //RE
+            if(_c == 0) //RE, reset
 			{
 				NEWGAME = 1; //reset game flag
 				SIDE = 0; //reset side to default
 				mate(test, 0); //clear mate
-                newGame(test); //new game
+                newGame(test, searchDepth); //new game
 			}
-            if(_c == 1); //CB
-            if(_c == 2) //CL
+            if(_c == 1); //CB, challenger bottom, blitz enable disable?
+            if(_c == 2) //CL, clear
                 clear(test); //clear the HW display
-            if(_c == 3) //EN
+            if(_c == 3) //EN, enter
 			{
 				if(NEWGAME){SIDE=!SIDE;NEWGAME=0;}; //if the game is new, flop sides
                 go(test); //send engine command
-				think(test); //think screen
+				//think(test); //think screen
+				thinkANI(test); //think with animation
 			}
-            if(_c == 4) //LV
-                level(test); //select your level of play
-            if(_c == 5); //DM
-            if(_c == 6); //PB
-            if(_c == 7) //PV
-                posVer(test); //position verification, fen string
+            if(_c == 4) //LV, level
+                level(test, searchDepth); //select your level of play
+            if(_c == 5) //DM,"double move?" undo a move
+				undoMove(test);
+            if(_c == 6) //PB, problem mode
+				hint(test);
+            if(_c == 7) //PV, position verification
+                posVer(test); //position verification request
             if((_c >= 8)&&(_c <= 15)) //alpha-num buttons
             {
 				if(NEWGAME){NEWGAME=0;};
                 if(!getMove(test, _c)) //if move was "entered"
 				{
 					check(test, 0); //clear check led
-					think(test); //show think screen
+					//think(test); //show think screen
+					thinkANI(test); //think with animation
 				}
             }
         }
@@ -600,7 +706,7 @@ int main(void)
             string _d = test.get_engine(); //get engine response
             int _a = test.checkState(_d, 1); //check and trim
             if((_a == 1) || (_a == 2)) //error or illegal move
-                error(test); //error screen
+                error(test); //error screen, flash @ 2hz
             if((_a == 3) && (SIDE == BLACK)) //black in check
                 check(test, 1); //set check led
             if((_a == 4) && (SIDE == WHITE)) //white in check
@@ -615,8 +721,10 @@ int main(void)
 				killScreen(test, _a, 150); //@150ms/char speed
             if(_a == 12) //get computer move
                 showMove(test, _d); //display the computers move
-			if(_a == 13); //hint
-			if(_a == 14); //fen
+			if(_a == 13) //hint
+				showMove(test, _d + "  "); //display computer hint, in different notation.
+			if(_a == 14) //fen
+				fen(test, _d); //display fen string
         }
         cpuBreak();
     }
