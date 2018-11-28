@@ -102,7 +102,7 @@ public:
 	//string getState(int a){return response[a-1];};
 private:
     redi::pstream* proc;
-    string response[15] =
+    const string response[15] =
     {
         "Error (unknown command):",
         "Illegal move:",
@@ -399,7 +399,7 @@ bool getMove(FrontEnd &a, int b) //get move from user
             }
             if(_c == 3) //enter
             {
-                a.send_engine(move);
+                a.send_engine(move); //send move to engine
                 return 0;
             }
         }
@@ -415,7 +415,7 @@ void showMove(FrontEnd &a, string b)
 
 void clear(FrontEnd &a) //clear display, fix later
 {
-    a.send_display("----");
+    a.send_display("----"); //would blank be better?
 }
 
 void level(FrontEnd &a) //set level
@@ -473,17 +473,26 @@ void mate(FrontEnd &a, bool b) //map to correct led on hardware
 	}
 }
 
+void mateBlink(FrontEnd &a)
+{
+	a.hwDisplay->setBlinkRate(2); //blink display
+	bool _b;
+	do{
+		_b = a.is_button();
+		cpuBreak();
+	}while(!_b); //wait for any-key to be pushed
+	a.hwDisplay->setBlinkRate(0); //turn off blink
+}
+
 void think(FrontEnd &a) //might remove this latter
 {
 	string spinner = "/-\\|";
 	bool _b;
 	int i = 0;
 	do{
-		a.hwDisplay->printM(spinner.at(i),0); //replace with for loop?
-		a.hwDisplay->printM(spinner.at(i),1);
-		a.hwDisplay->printM(spinner.at(i),2);
-		a.hwDisplay->printM(spinner.at(i),3);
-		a.hwDisplay->update();
+		for(int j = 0; j < 4; j++)
+			a.hwDisplay->printM(spinner.at(i),j); //put that shit in the display buffer
+		a.hwDisplay->update(); //show on display
 		i=(i+1)%4;
 		_b = a.is_engine() | a.is_button(); //break if engine or button
 		a.hwDisplay->delay(100); //increase to ramming speed captain!, affects update
@@ -505,7 +514,7 @@ void killScreen(FrontEnd &a, int b, int _delay)
 			a.hwDisplay->printM(temp.at((i+j)%_tempL), j); // writes to "display buffer"
 		a.hwDisplay->update(); //pushes to display
 		i=(i+1)%_tempL;
-		a.hwDisplay->delay(_delay); //150ms delay, affects update
+		a.hwDisplay->delay(_delay); //150ms delay, affects update, might remove
 		_b = a.is_button();
 		//cpuBreak();
 	}while(!_b); //wait for any-key to be pushed
@@ -515,8 +524,8 @@ int main(void)
 {
     printf("Chess Challenger\n");
     printf("Slash/Byte\n");
-    printf("----------------------\n");
-	printf("keyboard emulation map\n");
+    printf("----------------------\n"); //mapped the buttons to the keyboard for testing on the PC
+	printf("keyboard emulation map\n"); //still no hardware button code yet *sad*, slash/bytes lazy
 	printf("1:RE, 2:CB, 3:CL, 4:EN\n");
 	printf("Q:LV, W:DM, E:PB, R:PV\n");
 	printf("A:A1, S:B2, D:C3, F:D4\n");
@@ -524,22 +533,30 @@ int main(void)
 	printf("----------------------\n");
 
     STARBURST HT; //hardware display
-    FrontEnd test(&HT); //polyglot + stockfish
+    FrontEnd test(&HT); //polyglot + stockfish9 (or 8, 8's nice too... I guess)
+	//thats right, I'm not smart enough to wright a "good" chess engine
+	//but hey, that just means I can use any UCI compatible engine on my hardware!
+	//assuming it works with polyglot (a UCI to win-board converter)
+	//oh and polyglot supports opening books, so...
+	//stockfish9 with an opening book, on hardware! *mind blown*
+	//thanks science!
 
     HT.begin(ADDR, 4); //address of the display and the number of digits
     HT.clrAll();
-    HT.print("Chess Challenger", 50);
+    HT.print("Chess Challenger", 100);
     HT.print("----");
 	
-	test.begin();
+	//start the io threads, engine input/output & button/display IO, all intendant
+	test.begin(); //not sure if that was the best decision, but it works well
 	
+	//helper variables for game play logic
     bool _b;
     bool SIDE = 0;
     bool NEWGAME = 1;
     const bool WHITE = 0;
     const bool BLACK = 1;
 	
-    while(1)
+    while(1) //a for loop that will run till the end of time!, or till the batteries die...
     {
         _b = test.is_button(); //check button
         if(_b) //if there was a button press
@@ -547,33 +564,33 @@ int main(void)
             int _c = test.get_button(); //get button
             if(_c == 0) //RE
 			{
-				NEWGAME = 1;
-				SIDE = 0;
+				NEWGAME = 1; //reset game flag
+				SIDE = 0; //reset side to default
 				mate(test, 0); //clear mate
-                newGame(test);
+                newGame(test); //new game
 			}
             if(_c == 1); //CB
             if(_c == 2) //CL
-                clear(test);
+                clear(test); //clear the HW display
             if(_c == 3) //EN
 			{
-				if(NEWGAME){SIDE=!SIDE;NEWGAME=0;};
-                go(test);
-				think(test);
+				if(NEWGAME){SIDE=!SIDE;NEWGAME=0;}; //if the game is new, flop sides
+                go(test); //send engine command
+				think(test); //think screen
 			}
             if(_c == 4) //LV
-                level(test);
+                level(test); //select your level of play
             if(_c == 5); //DM
             if(_c == 6); //PB
             if(_c == 7) //PV
-                posVer(test);
+                posVer(test); //position verification, fen string
             if((_c >= 8)&&(_c <= 15)) //alpha-num buttons
             {
 				if(NEWGAME){NEWGAME=0;};
                 if(!getMove(test, _c)) //if move was "entered"
 				{
-					check(test, 0); //clear check
-					think(test);
+					check(test, 0); //clear check led
+					think(test); //show think screen
 				}
             }
         }
@@ -583,19 +600,21 @@ int main(void)
             string _d = test.get_engine(); //get engine response
             int _a = test.checkState(_d, 1); //check and trim
             if((_a == 1) || (_a == 2)) //error or illegal move
-                error(test);
+                error(test); //error screen
             if((_a == 3) && (SIDE == BLACK)) //black in check
-                check(test, 1); //set check
+                check(test, 1); //set check led
             if((_a == 4) && (SIDE == WHITE)) //white in check
-                check(test, 1); //set check
-			if((_a == 5) && (SIDE == WHITE)) //white mates, might be backwards...
-				mate(test, 1);
+                check(test, 1); //set check led
+			if((_a == 5) && (SIDE == WHITE)) //white mates
+				mate(test, 1); //set mate led
 			if((_a == 6) && (SIDE == BLACK)) //black mates
-				mate(test, 1);
-			if((_a >= 7) && (_a <= 11)) //scroll kill-screen
+				mate(test, 1); //set mate led
+			if((_a == 5) || (_a == 6))
+				mateBlink(test); //flash display @ 1hz, if mate (end of game)
+			if((_a >= 7) && (_a <= 11)) //scroll kill-screen (draw message)
 				killScreen(test, _a, 150); //@150ms/char speed
             if(_a == 12) //get computer move
-                showMove(test, _d);
+                showMove(test, _d); //display the computers move
 			if(_a == 13); //hint
 			if(_a == 14); //fen
         }
