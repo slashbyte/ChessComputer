@@ -5,6 +5,7 @@
  *  ▐█▄▪▐█▐█▌▐▌▐█ ▪▐▌▐█▄▪▐███▌▐▀██▄▪▐█ ▐█▀·. ▐█▌·▐█▄▄▌
  *   ▀▀▀▀ .▀▀▀  ▀  ▀  ▀▀▀▀ ▀▀▀ ··▀▀▀▀   ▀ •  ▀▀▀  ▀▀▀
  *                                         11-27-2018
+ *	demo code for chess challenger
  */
 
 #include <stdio.h>
@@ -34,14 +35,14 @@ public:
     };
     bool set_str(string a)
     {
-        if(is())return 1;
+        if(is()) return 1;
         strBuf = a;
         _is = 1;
         return 0;
     };
     bool set_int(int a)
     {
-        if(is())return 1;
+        if(is()) return 1;
         intBuf = a;
         _is = 1;
         return 0;
@@ -98,9 +99,10 @@ public:
     void readButton(void); //read buttons
     //functions
     int checkState(string &a, bool b = 0); //get state code from string
+	//string getState(int a){return response[a-1];};
 private:
     redi::pstream* proc;
-    string responce[15] =
+    string response[15] =
     {
         "Error (unknown command):",
         "Illegal move:",
@@ -160,6 +162,7 @@ void Wrapper::readEngine(void)
         if(engineOutput.is() == 0) //if buffer is empty
         {
             string readBuffer = getStream(); //read the stream
+			printf("RAW ENGINEIN: %s\n", readBuffer.c_str());
             if(!readBuffer.empty()) //if stream is full
             {
                 int a = checkState(readBuffer); //check the state, no trim
@@ -174,7 +177,7 @@ void Wrapper::readEngine(void)
     }
 }
 
-//send data to the display (cout emulation)
+//send data to the display (cout emulation) + hardware display
 void Wrapper::writeDispay(void)
 {
     while(1)
@@ -198,9 +201,10 @@ void Wrapper::writeEngine(void)
         if(engineInput.is() == 1) //if the buffer is full
         {
             string input = engineInput.get_str(); //get the input data
+			printf("RAW ENGINEOUT: %s\n", input.c_str()); //comment me out
             putStream(input); //write the input data to the engine
         }
-        cpuBreak(); //this_thread::sleep_for(chrono::milliseconds(HANDBREAK)); //HANDBREAK!!!!!
+        cpuBreak(); //HANDBREAK!!!!!
     }
 }
 
@@ -255,7 +259,7 @@ int Wrapper::checkState(string &a, bool b) //found a better way!, b=1 for trim
 
     do
     {
-        found = a.find(responce[return_val]); //iterate through valid engine response
+        found = a.find(response[return_val]); //iterate through valid engine response
         return_val++;
         if(found!=string::npos)
             break;
@@ -328,7 +332,7 @@ public:
         for(string::size_type i = 0; i < a.length(); i++)
             if((a.at(i) >= 65) && (a.at(i) <= 90)) a.at(i) = a.at(i)+32;
     };
-    char buttonToChar(int a, int b)
+    char buttonToChar(int a, int b) //yeah I could have used math...
     {
         if(b%2) return num[a-8];
         else return alfa[a-8];
@@ -357,26 +361,20 @@ void undoMove(FrontEnd &a) //undo move
     a.send_engine("remove"); //I think thats undo
 }
 
-void go(FrontEnd &a, bool &game, bool &side) //go Go GO!
+void go(FrontEnd &a) //go Go GO!
 {
-    if(game)
-        side = !side; //if game is new, first to move is computer, swap sides
-    game = 0;
     a.send_engine("go");
-    a.send_display("Hmmm");
 }
 
-void newGame(FrontEnd &a, bool &game, bool &side) //new game
+void newGame(FrontEnd &a) //new game
 {
-    game = 1; //new game
-    side = 0; //default side white
     a.send_engine("new");
-    a.send_engine("force");
-    a.send_engine("st 0"); //blitz mode for test
+    //a.send_engine("force"); //odd things happened....
+    a.send_engine("st 0"); //blitz mode for test, move to level or something
     a.send_display("New ");
 }
 
-void getMove(FrontEnd &a, int b, bool &c) //get move from user
+bool getMove(FrontEnd &a, int b) //get move from user
 {
     string move = "----";
     move.at(0) = a.buttonToChar(b, 0); //alfa[a-8]; //convert to indexed char
@@ -384,7 +382,7 @@ void getMove(FrontEnd &a, int b, bool &c) //get move from user
     a.send_display(move, 1); //update with first button press, upper
     while(1) //input loop
     {
-        bool _b = a.is_button();
+        bool _b = a.is_button(); //while buttons !clear or !enter, grab user input
         if(_b)
         {
             int _c = a.get_button();
@@ -397,18 +395,17 @@ void getMove(FrontEnd &a, int b, bool &c) //get move from user
             if(_c == 2) //clear
             {
                 a.send_display("----"); //send to display, update
-                return;
+                return 1;
             }
             if(_c == 3) //enter
             {
-                c = 0;
                 a.send_engine(move);
-                a.send_display("Hmmm"); //send to display
-                return;
+                return 0;
             }
         }
         cpuBreak();
     }
+	return 1;
 }
 
 void showMove(FrontEnd &a, string b)
@@ -436,79 +433,148 @@ void hint(FrontEnd &a)
     a.send_engine("hint");
 }
 
-void error(FrontEnd &a, int b)
+void error(FrontEnd &a)
 {
-    if(b == 0)
-        a.hwDisplay->setBlinkRate(0); //turn off blink
-    else
-    {
-        a.hwDisplay->setBlinkRate(3); //blink display
-        a.send_display("----"); //clear display
-    }
+	a.send_display("____"); //clear display
+	a.hwDisplay->setBlinkRate(3); //blink display
+	bool _b;
+	do{
+		_b = a.is_button();
+		cpuBreak();
+	}while(!_b); //wait for any-key to be pushed
+	a.hwDisplay->setBlinkRate(0); //turn off blink
 }
 
-void check(FrontEnd &a, bool b) //map to led
+void check(FrontEnd &a, bool b) //map to correct led on hardware
 {
     if(b)
-        printf("check set\n");
+	{
+        printf("check set\n"); //remove
+		a.hwDisplay->setLed(14);
+	}
     else
-        printf("check clear\n");
+	{
+        printf("check clear\n"); //remove
+		a.hwDisplay->clrLed(14);
+	}
 }
 
-void mate(FrontEnd &a, bool b) //map to led
+void mate(FrontEnd &a, bool b) //map to correct led on hardware
 {
     if(b)
-        printf("mate set\n");
+	{
+        printf("mate set\n"); //remove
+		a.hwDisplay->setLed(62);
+	}
     else
-        printf("mate clear\n");
+	{
+        printf("mate clear\n"); //remove
+		a.hwDisplay->clrLed(62);
+	}
+}
+
+void think(FrontEnd &a) //might remove this latter
+{
+	string spinner = "/-\\|";
+	bool _b;
+	int i = 0;
+	do{
+		a.hwDisplay->printM(spinner.at(i),0); //replace with for loop?
+		a.hwDisplay->printM(spinner.at(i),1);
+		a.hwDisplay->printM(spinner.at(i),2);
+		a.hwDisplay->printM(spinner.at(i),3);
+		a.hwDisplay->update();
+		i=(i+1)%4;
+		_b = a.is_engine() | a.is_button(); //break if engine or button
+		a.hwDisplay->delay(100); //increase to ramming speed captain!, affects update
+	}while(!_b); //wait for any-key to be pushed
+}
+
+void killScreen(FrontEnd &a, int b, int _delay)
+{
+	string KS[] = {
+		"White Mates", "Black Mates", "Stalemate", "Draw",
+        "Draw by 50 rule", "Draw", "Resign"
+	};
+	string temp = "    " + KS[b-5];
+	int _tempL = temp.length();
+	int i = 0;
+	bool _b;
+	do{
+		for(int j = 0; j < 4; j++)
+			a.hwDisplay->printM(temp.at((i+j)%_tempL), j); // writes to "display buffer"
+		a.hwDisplay->update(); //pushes to display
+		i=(i+1)%_tempL;
+		a.hwDisplay->delay(_delay); //150ms delay, affects update
+		_b = a.is_button();
+		//cpuBreak();
+	}while(!_b); //wait for any-key to be pushed
 }
 
 int main(void)
 {
     printf("Chess Challenger\n");
     printf("Slash/Byte\n");
-    printf("----------------\n");
+    printf("----------------------\n");
+	printf("keyboard emulation map\n");
+	printf("1:RE, 2:CB, 3:CL, 4:EN\n");
+	printf("Q:LV, W:DM, E:PB, R:PV\n");
+	printf("A:A1, S:B2, D:C3, F:D4\n");
+	printf("Z:E5, X:F6, C:G7, V:H8\n");
+	printf("----------------------\n");
 
     STARBURST HT; //hardware display
     FrontEnd test(&HT); //polyglot + stockfish
 
     HT.begin(ADDR, 4); //address of the display and the number of digits
     HT.clrAll();
-    //HT.print("Chess Challenger", 150);
+    HT.print("Chess Challenger", 50);
     HT.print("----");
-
-    test.begin();
-
+	
+	test.begin();
+	
     bool _b;
     bool SIDE = 0;
     bool NEWGAME = 1;
     const bool WHITE = 0;
     const bool BLACK = 1;
-
+	
     while(1)
     {
         _b = test.is_button(); //check button
         if(_b) //if there was a button press
         {
-            error(test, 0); //turn off blink
             int _c = test.get_button(); //get button
             if(_c == 0) //RE
-                newGame(test, NEWGAME, SIDE);
+			{
+				NEWGAME = 1;
+				SIDE = 0;
+				mate(test, 0); //clear mate
+                newGame(test);
+			}
             if(_c == 1); //CB
             if(_c == 2) //CL
                 clear(test);
             if(_c == 3) //EN
-                go(test, NEWGAME, SIDE);
+			{
+				if(NEWGAME){SIDE=!SIDE;NEWGAME=0;};
+                go(test);
+				think(test);
+			}
             if(_c == 4) //LV
                 level(test);
             if(_c == 5); //DM
             if(_c == 6); //PB
             if(_c == 7) //PV
                 posVer(test);
-            if((_c >= 8)&&(_c <= 15))
+            if((_c >= 8)&&(_c <= 15)) //alpha-num buttons
             {
-                getMove(test, _c, NEWGAME);
-                check(test, 0); //clear check
+				if(NEWGAME){NEWGAME=0;};
+                if(!getMove(test, _c)) //if move was "entered"
+				{
+					check(test, 0); //clear check
+					think(test);
+				}
             }
         }
         _b = test.is_engine(); //check engine
@@ -517,19 +583,22 @@ int main(void)
             string _d = test.get_engine(); //get engine response
             int _a = test.checkState(_d, 1); //check and trim
             if((_a == 1) || (_a == 2)) //error or illegal move
-                error(test, _a);
+                error(test);
             if((_a == 3) && (SIDE == BLACK)) //black in check
                 check(test, 1); //set check
             if((_a == 4) && (SIDE == WHITE)) //white in check
                 check(test, 1); //set check
-            if((_a == 5) && (SIDE == WHITE)) //white mates, might be backwards...
-                mate(test, 1);
-            if((_a == 6) && (SIDE == BLACK)) //black mates
-                mate(test, 1);
+			if((_a == 5) && (SIDE == WHITE)) //white mates, might be backwards...
+				mate(test, 1);
+			if((_a == 6) && (SIDE == BLACK)) //black mates
+				mate(test, 1);
+			if((_a >= 7) && (_a <= 11)) //scroll kill-screen
+				killScreen(test, _a, 150); //@150ms/char speed
             if(_a == 12) //get computer move
                 showMove(test, _d);
+			if(_a == 13); //hint
+			if(_a == 14); //fen
         }
-
         cpuBreak();
     }
     return 0;
