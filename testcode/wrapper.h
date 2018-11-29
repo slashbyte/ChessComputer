@@ -13,30 +13,29 @@
 #ifndef wrapper_h
 #define wrapper_h
 
-class Wrapper //keeps all the candy fresh! shhh...
+class Wrapper
 {
 public:
     Wrapper(STARBURST *a);
     STARBURST* hwDisplay;
-    //buffer object
+    ///////////////////////////////////
     ThreadBuffer engineOutput; //from engine
     ThreadBuffer engineInput; //to engine
     ThreadBuffer displayInput; //to display
     ThreadBuffer buttonOutput; //from button
-    //threads to do my bidding!
+    //////////////////////////////////////////////
     void readEngine(void); //grab engine commands
     void writeDispay(void); //write to display
     void writeEngine(void); //write to engine
     void readButton(void); //read buttons
-    //functions
+    /////////////////////////////////////////////
     int checkState(std::string &a, bool b = 0); //get state code from string
-    void cpuBreak(void)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(HANDBREAK));
-    };
+    void cpuBreak(void){std::this_thread::sleep_for(std::chrono::milliseconds(HANDBREAK));};
     //string getState(int a){return response[a-1];};
+	
 private:
     redi::pstream* proc;
+	const int HANDBREAK = 5; //cpu break time, 5 milliseconds
     const std::string response[15] =
     {
         "Error (unknown command):",
@@ -55,10 +54,10 @@ private:
         "POLYGLOT FEN:", //hacked polyglot
         "POLYGLOT" //hacked polyglot
     };
-    void putStream(std::string a);
+	/////////////////////////////////////////
+	void putStream(std::string a);
     std::string getStream(void);
     void clearStream(void);
-    const int HANDBREAK = 5;
 };
 
 #endif

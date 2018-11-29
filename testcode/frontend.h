@@ -19,20 +19,19 @@ class FrontEnd : public Wrapper
     using Wrapper::Wrapper;
 public:
     void begin(void); //starts 9 million threads
+	/////////////////////////////////////////
     bool is_button(void); //checks for valid button state
     int get_button(void); //gets button state
     bool is_engine(void); //checks for valid engine state
     std::string get_engine(void); //get engine state
+	/////////////////////////////////////
     void send_display(std::string a); //send a string to the display
     void send_display(std::string a, bool b); //sends string to the display, b=1, to uppercase
     void send_engine(std::string a); //send to engine
-    void strToUpper(std::string &a); //string to uppercase
-    void strToLower(std::string &a); //string to lower case
-    char buttonToChar(int a, int b); //converts a button code to a char
-    /////////////////////////////////////
+	/////////////////////////////////////
     void undoMove(void); //undo the last two moves
     void go(void); //invokes the engine
-    void newGame(int sd); //starts a new game
+    void newGame(int sd, bool p); //starts a new game
     bool getMove(int b); //gets the users move
     void showMove(std::string b); //shows the current move
     void clear(void); //clears the hardware display
@@ -49,7 +48,11 @@ public:
     void saveDisplayState(void); //saves the current display state
     void restoreDisplayState(void); //restores the saved display state
     void level(int &sd); //sets the search depth level
-
+	void ponder(bool &p); //turn ponder on or off
+	void getBoard(void);
+	void printBoard(std::string a);
+	void showHint(std::string b);
+	
 private:
     std::thread t1,t2,t3,t4;
     const char alfa[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
@@ -57,6 +60,10 @@ private:
     const std::string spinner = "/-\\|";
     const std::string KS[7] = {"White Mates", "Black Mates", "Stalemate", "Draw", "Draw by 50 rule", "Draw", "Resign"};
     uint16_t mState[8];
+	/////////////////////////////////////
+	void strToUpper(std::string &a); //string to uppercase
+    void strToLower(std::string &a); //string to lower case
+    char buttonToChar(int a, int b); //converts a button code to a char
 };
 
 #endif

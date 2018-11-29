@@ -26,6 +26,7 @@ public:
     void set_int_easy(int a);
     std::string get_str(void);
     int get_int(void);
+	
 private:
     //buffer
     bool _is = 0;

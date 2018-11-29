@@ -35,9 +35,17 @@ void Wrapper::putStream(std::string a)
 //read from stream
 std::string Wrapper::getStream(void)
 {
-    char buf[256];
-    proc->getline(buf, sizeof(buf), '\n');
-    std::string buffer = buf;
+    //char buf[256]; //what the hell was I thinking?
+    //proc->getline(buf, sizeof(buf), '\n');
+    //std::string buffer = buf;
+	std::string buffer;
+	if(!std::getline(*proc, buffer))
+	{
+		printf("Check your polyglot Install and .ini file\n");
+		printf("also check your engine installation path\n");
+		printf("Stream Error, see ya!\n");
+		exit(EXIT_FAILURE); //don't do this at home kids
+	}
     //printf("STREAM RAW: %s\n", buffer.c_str()); //comment me out, ok!
     return buffer;
 }
@@ -48,6 +56,9 @@ void Wrapper::clearStream(void)
     proc->clear();
 }
 
+//reads the engine from the input
+//ya know I'm like 90% sure I'm calling this stuff the wrong name, "stream"?...
+//I need a book
 void Wrapper::readEngine(void)
 {
     while(1)
@@ -55,13 +66,13 @@ void Wrapper::readEngine(void)
         if(engineOutput.is() == 0) //if buffer is empty
         {
             std::string readBuffer = getStream(); //read the stream
-            printf("RAW ENGINEIN: %s\n", readBuffer.c_str());
+            //printf("RAW ENGINEIN: %s\n", readBuffer.c_str()); //debuging, comment me out
             if(!readBuffer.empty()) //if stream is full
             {
                 int a = checkState(readBuffer); //check the state, no trim
                 if(a) //if the state is valid
                 {
-                    printf("OPCODE: %d, DEBUG: %s\n", a, readBuffer.c_str()); //comment me out
+                    //printf("OPCODE: %d, DEBUG: %s\n", a, readBuffer.c_str()); //comment me out
                     engineOutput.set_str_easy(readBuffer); //set the output
                 }
             }
@@ -78,8 +89,7 @@ void Wrapper::writeDispay(void)
         if(displayInput.is() == 1) //if the buffer is full
         {
             std::string disp = displayInput.get_str(); //get the display data
-            printf("STARBURST: %s\n", disp.c_str()); //cout emu, display the data
-
+            //printf("STARBURST: %s\n", disp.c_str()); //cout emu, display the data, debug
             hwDisplay->print(disp); //writes to hardware display, nothing fancy
         }
         cpuBreak();
@@ -94,7 +104,7 @@ void Wrapper::writeEngine(void)
         if(engineInput.is() == 1) //if the buffer is full
         {
             std::string input = engineInput.get_str(); //get the input data
-            printf("RAW ENGINEOUT: %s\n", input.c_str()); //comment me out
+            //printf("RAW ENGINEOUT: %s\n", input.c_str()); //comment me out
             putStream(input); //write the input data to the engine
         }
         cpuBreak(); //HANDBREAK!!!!!
@@ -142,6 +152,7 @@ void Wrapper::readButton(void)
     }
 }
 
+//checks the info passed in by polyglot
 int Wrapper::checkState(std::string &a, bool b) //found a better way!, b=1 for trim
 {
     if(a.empty())

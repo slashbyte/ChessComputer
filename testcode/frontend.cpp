@@ -23,12 +23,13 @@
 //begins the threads
 void FrontEnd::begin(void)
 {
-    t1 = std::thread(&FrontEnd::readEngine, this); //start thread
+	//start thread
+    t1 = std::thread(&FrontEnd::readEngine, this);
     t2 = std::thread(&FrontEnd::writeEngine, this);
     t3 = std::thread(&FrontEnd::readButton, this);
     t4 = std::thread(&FrontEnd::writeDispay, this);
-
-    t1.detach(); //background
+	//background
+    t1.detach();
     t2.detach();
     t3.detach();
     t4.detach();
@@ -98,11 +99,15 @@ char FrontEnd::buttonToChar(int a, int b) //yeah I could have used math...
     if(b%2) return num[a-8];
     else return alfa[a-8];
 }
-
-//undo, the computers last more, then your last move
+//////////////////////////////////////////////////////
+//undo, the computers last move, then your last move
 void FrontEnd::undoMove(void)
 {
+	saveDisplayState();
     send_engine("remove"); //I think thats undo
+	send_display("Undo");
+	hwDisplay->delay(500); //wait before going back to the screen
+	restoreDisplayState();
 }
 
 //invoke the engine
@@ -112,12 +117,35 @@ void FrontEnd::go(void)
 }
 
 //start a new game
-void FrontEnd::newGame(int sd) //new game
+void FrontEnd::newGame(int sd, bool p) //new game
 {
     std::string _sd = "sd " + std::to_string(sd); //convert search depth to string
     send_engine("new");
     send_engine(_sd);
+	if(p)
+		send_engine("hard");
+	else
+		send_engine("easy");
     send_display("New ");
+}
+
+//turns on ponder, think on opponents move, uses the cpu 100% of the time
+void FrontEnd::ponder(bool &p)
+{
+	saveDisplayState();
+	p = !p;
+	if(p)
+	{
+		send_engine("hard");
+		send_display("On  ");
+	}
+	else
+	{
+		send_engine("easy");
+		send_display("Off ");
+	}
+	hwDisplay->delay(500);
+	restoreDisplayState();
 }
 
 //get a users move
@@ -158,7 +186,31 @@ bool FrontEnd::getMove(int b) //get move from user
 //show the computers move
 void FrontEnd::showMove(std::string b)
 {
+	////// remove this bit latter/////////////////
+	bool _hold = (hwDisplay->memory[0] & 0x4000); //Q&D fix
+	//////////////////////////////////////////////
+	//send_display() was clearing the emulated "check" light
+	//the DP was being over written upon update
+	//but this shouldn't be a problem once I set the
+	//real board led index values for check and mate
+	//remove quick and dirty fix later
+	
     send_display(b, 1); //send to display, upper
+	
+	/////// and this /////////////////////////////
+	if(_hold) //Q&D fix
+		hwDisplay->setLed(14);
+	/////////////////////////////////////////////
+}
+
+//show the computers hint
+void FrontEnd::showHint(std::string b)
+{
+	saveDisplayState();
+    send_display(b); //send to display
+	printf("HINT: %s\n", b.c_str()); //debug, comment me out
+	hwDisplay->delay(750);
+	restoreDisplayState();
 }
 
 //clear the display
@@ -170,7 +222,29 @@ void FrontEnd::clear(void) //clear display, fix later
 //request position verification
 void FrontEnd::posVer(void)
 {
-    send_engine("DUMP");
+    send_engine("FEN"); //hacked polyglot command
+}
+
+//request current board
+void FrontEnd::getBoard(void)
+{
+	send_engine("BOARD");
+}
+
+//used for debugging 
+void FrontEnd::printBoard(std::string a)
+{
+	std::string::size_type _l = a.length();
+	if(_l == 17) //expected length
+	{
+		for(int i = 9; i < 17; i++) //magic numbers mean ice cream
+			printf("%c ", a.at(i));
+		printf("\n");
+	}
+	else// if(_l == 8)
+	{
+		printf("---------------\n");
+	}
 }
 
 //ask for a hint
@@ -207,9 +281,9 @@ void FrontEnd::check(bool b) //map to correct led on hardware
 void FrontEnd::mate(bool b) //map to correct led on hardware
 {
     if(b)
-        hwDisplay->setLed(62); //fix
+        hwDisplay->setLed(62); //fix led num
     else
-        hwDisplay->clrLed(62); //fix
+        hwDisplay->clrLed(62); //fix led num
 }
 
 //flash when mate (the end of the game)
@@ -238,7 +312,7 @@ void FrontEnd::thinkANI(void)
         hwDisplay->update(); //show on display
         i=(i+1)%4;
         _b = is_engine() | is_button(); //break if engine or button
-        hwDisplay->delay(100); //increase to ramming speed captain!, !!affects update!!
+        hwDisplay->delay(100); //increase to ramming speed captain!, !!affects update time!!
     }
     while(!_b);  //wait for any-key to be pushed
 }
@@ -262,7 +336,7 @@ void FrontEnd::killScreen(int b, int _delay)
             hwDisplay->printM(temp.at((i+j)%_tempL), j); // writes to "display buffer"
         hwDisplay->update(); //pushes to display
         i=(i+1)%_tempL;
-        hwDisplay->delay(_delay); //150ms delay, affects update, might remove
+        hwDisplay->delay(_delay); //150ms delay, affects update time, might remove
         _b = is_button();
     }
     while(!_b);  //wait for any-key to be pushed
@@ -287,7 +361,7 @@ void FrontEnd::restoreDisplayState(void)
 void FrontEnd::fen(std::string b)
 {
     saveDisplayState();
-    printf("%s\n", b.c_str()); //for debug
+    //printf("FEN: %s\n", b.c_str()); //for debug
     while(b.length()%4) //stretch to multiple of 4, yeah I don't like it either...
         b += " ";
     std::string::size_type i = 0;
@@ -313,7 +387,9 @@ void FrontEnd::fen(std::string b)
                     i=i+4;
                 }
                 else
-                    send_display("-END");
+				{
+					send_display("-END");
+				}
             }
         }
         cpuBreak();
@@ -342,7 +418,7 @@ void FrontEnd::level(int &sd) //set level
                 restoreDisplayState();
                 return;
             }
-            if(_c == 4) //lv button
+            if(_c == 4) //lv button, increment
             {
                 sd = 1+(sd%25);
                 if(sd < 10)
