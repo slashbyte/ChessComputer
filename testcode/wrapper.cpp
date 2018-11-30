@@ -35,9 +35,6 @@ void Wrapper::putStream(std::string a)
 //read from stream
 std::string Wrapper::getStream(void)
 {
-    //char buf[256]; //what the hell was I thinking?
-    //proc->getline(buf, sizeof(buf), '\n');
-    //std::string buffer = buf;
 	std::string buffer;
 	if(!std::getline(*proc, buffer))
 	{
@@ -57,8 +54,6 @@ void Wrapper::clearStream(void)
 }
 
 //reads the engine from the input
-//ya know I'm like 90% sure I'm calling this stuff the wrong name, "stream"?...
-//I need a book
 void Wrapper::readEngine(void)
 {
     while(1)
@@ -81,16 +76,43 @@ void Wrapper::readEngine(void)
     }
 }
 
-//send data to the display (cout emulation) + hardware display
-void Wrapper::writeDispay(void)
+//use this before you call the hwDisplay object from another function
+//its best to wait and make sure writeDisplay isn't using it first
+bool Wrapper::displayBusy(void)
+{
+	return _displayBusy;
+}
+
+//send data to the display (cout emulation) + hardware display	
+void Wrapper::writeDisplay(void) //wow I really can't spell
 {
     while(1)
     {
         if(displayInput.is() == 1) //if the buffer is full
         {
+			_displayBusy = 1; //display lock
             std::string disp = displayInput.get_str(); //get the display data
             //printf("STARBURST: %s\n", disp.c_str()); //cout emu, display the data, debug
-            hwDisplay->print(disp); //writes to hardware display, nothing fancy
+			
+			//check & mate DP bug fix
+			//have to use the displays DP for check and mate
+			//till I get the boards populated
+			//I hate writing software for hardware I don't have...
+			//////////////////// Remove ////////////////////////////////////
+			//preserve DP state
+			bool _check = (hwDisplay->memory[0] & 0x4000); //Q&D fix
+			bool _mate = (hwDisplay->memory[3] & 0x4000); //Q&D fix
+			/////////////////////////////////////////////////////////
+			if(!disp.empty())
+				hwDisplay->print(disp); //writes to hardware display, nothing fancy
+			////////////////// Remove ////////////////////////////////
+			//re-enable DP state after write
+			if(_check)
+				hwDisplay->setLed(14); //Q&D fix
+			if(_mate)
+				hwDisplay->setLed(62); //Q&D fix
+			/////////////////////////////////////////////////////////
+			_displayBusy = 0; //display unlock
         }
         cpuBreak();
     }
@@ -105,7 +127,8 @@ void Wrapper::writeEngine(void)
         {
             std::string input = engineInput.get_str(); //get the input data
             //printf("RAW ENGINEOUT: %s\n", input.c_str()); //comment me out
-            putStream(input); //write the input data to the engine
+			if(!input.empty())
+				putStream(input); //write the input data to the engine
         }
         cpuBreak(); //HANDBREAK!!!!!
     }
@@ -120,6 +143,7 @@ void Wrapper::readButton(void)
         {
             //quick and dirty emulation for keypad
             //replace with real code later
+			/////////////////////////////////////
             char a = getchar();
             if(a) //check input
             {
@@ -147,6 +171,7 @@ void Wrapper::readButton(void)
                 if(k!= -1) //if input is ok
                     buttonOutput.set_int_easy(k); //set button
             }
+			///////////////////////////////////////////////////////
         }
         cpuBreak();
     }

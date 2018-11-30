@@ -44,16 +44,17 @@ int main(void)
     STARBURST HT; //hardware display
     FrontEnd CC(&HT); //polyglot + stockfish9 (or 8, 8's nice too... I guess)
     //thats right, I'm not smart enough to wright a "good" chess engine
-    //but hey, that just means I can use any UCI compatible engine on my hardware!
+    //but hey, that just means I can use "any" UCI compatible engine on my hardware!
+	//probably.... 
     //assuming it works with polyglot (a UCI to win-board converter)
     //oh and polyglot supports opening books, so...
     //stockfish9 with an opening book, on hardware! *mind blown*
-    //thanks science!
+	//idk if stockfish supports books out of the box or not...
 
     HT.begin(ADDR, 4); //address of the display and the number of digits
     HT.clrAll();
-    HT.print("Chess Challenger", 100);
-    //HT.print("----");
+    HT.print("SLASH/BTYE's Chess Challenger", 100);
+	HT.print("StockFish 9", 100);
 
     //start the io threads, engine input/output & button/display IO, all independent
     CC.begin(); //not sure if that was the best decision, but it works well
@@ -65,7 +66,7 @@ int main(void)
 	bool PONDER = 0;
     const bool WHITE = 0;
     const bool BLACK = 1;
-    int searchDepth = 2;
+    int searchDepth = 10;
 	
 	CC.newGame(searchDepth, PONDER); //start new game
 
@@ -92,7 +93,7 @@ int main(void)
                 {
                     SIDE=!SIDE;
                     NEWGAME=0;
-                }; 
+                }
                 CC.go(); //send engine command
                 //CC.think(); //think screen
                 CC.thinkANI(); //think with animation
@@ -111,9 +112,7 @@ int main(void)
             if((_c >= 8)&&(_c <= 15)) //alpha-num buttons
             {
                 if(NEWGAME)
-                {
                     NEWGAME=0;
-                };
                 if(!CC.getMove(_c)) //if move was "entered"
                 {
                     CC.check(0); //clear check led
@@ -155,13 +154,17 @@ int main(void)
 			
             if(_a == 12) //get computer move
 			{
+				printf("COMPUTER: %s\n", _d.c_str()); //for debug, and stuff, comment me out!
                 CC.showMove(_d); //display the computers move
 				CC.getBoard(); //debug stuff
 			}
-			//hint wont work in "level 01", IDK why
+			//"hint" wont work in "level 01", IDK why
 			//I think it has something to do with the "super limited" search depth
             if(_a == 13) //hint
+			{
+				printf("HINT: %s\n", _d.c_str()); //for debug, and stuff, comment me out!
                 CC.showHint(_d); //display computer hint, in different notation.
+			}
             if(_a == 14) //fen
 			{
 				printf("FEN: %s\n", _d.c_str()); //for debug, and stuff, comment me out!

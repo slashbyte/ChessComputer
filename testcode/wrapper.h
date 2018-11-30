@@ -25,17 +25,19 @@ public:
     ThreadBuffer buttonOutput; //from button
     //////////////////////////////////////////////
     void readEngine(void); //grab engine commands
-    void writeDispay(void); //write to display
+    void writeDisplay(void); //write to display
     void writeEngine(void); //write to engine
     void readButton(void); //read buttons
     /////////////////////////////////////////////
-    int checkState(std::string &a, bool b = 0); //get state code from string
+	bool displayBusy(void); //lock for direct display control
+    int checkState(std::string &a, bool b = 0); //get state code from string, b=1 for trim
     void cpuBreak(void){std::this_thread::sleep_for(std::chrono::milliseconds(HANDBREAK));};
     //string getState(int a){return response[a-1];};
 	
 private:
     redi::pstream* proc;
 	const int HANDBREAK = 5; //cpu break time, 5 milliseconds
+	bool _displayBusy = 0;
     const std::string response[15] =
     {
         "Error (unknown command):",

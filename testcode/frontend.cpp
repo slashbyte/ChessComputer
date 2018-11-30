@@ -27,7 +27,7 @@ void FrontEnd::begin(void)
     t1 = std::thread(&FrontEnd::readEngine, this);
     t2 = std::thread(&FrontEnd::writeEngine, this);
     t3 = std::thread(&FrontEnd::readButton, this);
-    t4 = std::thread(&FrontEnd::writeDispay, this);
+    t4 = std::thread(&FrontEnd::writeDisplay, this);
 	//background
     t1.detach();
     t2.detach();
@@ -96,13 +96,16 @@ void FrontEnd::strToLower(std::string &a)
 //converts a button code to a char
 char FrontEnd::buttonToChar(int a, int b) //yeah I could have used math...
 {
-    if(b%2) return num[a-8];
-    else return alfa[a-8];
+    if(b%2)
+		return num[a-8];
+    else 
+		return alfa[a-8];
 }
 //////////////////////////////////////////////////////
 //undo, the computers last move, then your last move
 void FrontEnd::undoMove(void)
 {
+	while(displayBusy()); //hwDisplay lock check
 	saveDisplayState();
     send_engine("remove"); //I think thats undo
 	send_display("Undo");
@@ -132,6 +135,7 @@ void FrontEnd::newGame(int sd, bool p) //new game
 //turns on ponder, think on opponents move, uses the cpu 100% of the time
 void FrontEnd::ponder(bool &p)
 {
+	while(displayBusy()); //hwDisplay lock check
 	saveDisplayState();
 	p = !p;
 	if(p)
@@ -186,30 +190,16 @@ bool FrontEnd::getMove(int b) //get move from user
 //show the computers move
 void FrontEnd::showMove(std::string b)
 {
-	////// remove this bit latter/////////////////
-	bool _hold = (hwDisplay->memory[0] & 0x4000); //Q&D fix
-	//////////////////////////////////////////////
-	//send_display() was clearing the emulated "check" light
-	//the DP was being over written upon update
-	//but this shouldn't be a problem once I set the
-	//real board led index values for check and mate
-	//remove quick and dirty fix later
-	
     send_display(b, 1); //send to display, upper
-	
-	/////// and this /////////////////////////////
-	if(_hold) //Q&D fix
-		hwDisplay->setLed(14);
-	/////////////////////////////////////////////
 }
 
 //show the computers hint
 void FrontEnd::showHint(std::string b)
 {
+	while(displayBusy()); //hwDisplay lock check
 	saveDisplayState();
     send_display(b); //send to display
-	printf("HINT: %s\n", b.c_str()); //debug, comment me out
-	hwDisplay->delay(750);
+	hwDisplay->delay(1000); //second delay for hint display
 	restoreDisplayState();
 }
 
@@ -231,7 +221,8 @@ void FrontEnd::getBoard(void)
 	send_engine("BOARD");
 }
 
-//used for debugging 
+//used for debugging in the console
+/////////////////////////////////////////////
 void FrontEnd::printBoard(std::string a)
 {
 	std::string::size_type _l = a.length();
@@ -241,11 +232,10 @@ void FrontEnd::printBoard(std::string a)
 			printf("%c ", a.at(i));
 		printf("\n");
 	}
-	else// if(_l == 8)
-	{
+	else
 		printf("---------------\n");
-	}
 }
+//////////////////////////////////////////////
 
 //ask for a hint
 void FrontEnd::hint(void)
@@ -256,6 +246,7 @@ void FrontEnd::hint(void)
 //display error screen
 void FrontEnd::error(void)
 {
+	while(displayBusy()); //hwDisplay lock check
     send_display("____"); //clear display
     hwDisplay->setBlinkRate(3); //blink display
     bool _b;
@@ -271,8 +262,9 @@ void FrontEnd::error(void)
 //check led control
 void FrontEnd::check(bool b) //map to correct led on hardware
 {
+	while(displayBusy()); //hwDisplay lock check
     if(b)
-        hwDisplay->setLed(14); //fix led num
+		hwDisplay->setLed(14); //fix led num
     else
         hwDisplay->clrLed(14); //fix led num
 }
@@ -280,6 +272,7 @@ void FrontEnd::check(bool b) //map to correct led on hardware
 //mate led control
 void FrontEnd::mate(bool b) //map to correct led on hardware
 {
+	while(displayBusy()); //hwDisplay lock check
     if(b)
         hwDisplay->setLed(62); //fix led num
     else
@@ -289,6 +282,7 @@ void FrontEnd::mate(bool b) //map to correct led on hardware
 //flash when mate (the end of the game)
 void FrontEnd::mateBlink(void)
 {
+	while(displayBusy()); //hwDisplay lock check
     hwDisplay->setBlinkRate(2); //blink display
     bool _b;
     do
@@ -303,6 +297,7 @@ void FrontEnd::mateBlink(void)
 //think screen animation
 void FrontEnd::thinkANI(void)
 {
+	while(displayBusy()); //hwDisplay lock check
     bool _b;
     int i = 0;
     do
@@ -311,8 +306,8 @@ void FrontEnd::thinkANI(void)
             hwDisplay->printM(spinner.at(i),j); //put that shit in the display buffer
         hwDisplay->update(); //show on display
         i=(i+1)%4;
-        _b = is_engine() | is_button(); //break if engine or button
         hwDisplay->delay(100); //increase to ramming speed captain!, !!affects update time!!
+		_b = is_engine() | is_button(); //break if engine or button
     }
     while(!_b);  //wait for any-key to be pushed
 }
@@ -326,6 +321,8 @@ void FrontEnd::think(void)
 //if the engine gives up, display why
 void FrontEnd::killScreen(int b, int _delay)
 {
+	while(displayBusy()); //hwDisplay lock check
+	saveDisplayState();
     std::string temp = "    " + KS[b-5];
     int _tempL = temp.length();
     int i = 0;
@@ -340,11 +337,13 @@ void FrontEnd::killScreen(int b, int _delay)
         _b = is_button();
     }
     while(!_b);  //wait for any-key to be pushed
+	restoreDisplayState();
 }
 
 //save the current display state
 void FrontEnd::saveDisplayState(void)
 {
+	while(displayBusy()); //hwDisplay lock check
     for(int i = 0; i < 8; i++) //save display state
         mState[i] = hwDisplay->memory[i];
 }
@@ -352,6 +351,7 @@ void FrontEnd::saveDisplayState(void)
 //restore the last display state
 void FrontEnd::restoreDisplayState(void)
 {
+	while(displayBusy()); //hwDisplay lock check
     for(int i = 0; i < 8; i++)
         hwDisplay->memory[i] = mState[i]; //renew state
     hwDisplay->update(); //display saved state
@@ -360,8 +360,8 @@ void FrontEnd::restoreDisplayState(void)
 //display the fen string on the hw display
 void FrontEnd::fen(std::string b)
 {
+	while(displayBusy()); //hwDisplay lock check
     saveDisplayState();
-    //printf("FEN: %s\n", b.c_str()); //for debug
     while(b.length()%4) //stretch to multiple of 4, yeah I don't like it either...
         b += " ";
     std::string::size_type i = 0;
@@ -372,7 +372,7 @@ void FrontEnd::fen(std::string b)
         if(_b)
         {
             int _c = get_button();
-            if(_c == 3) //enter, return to play
+            if((_c == 3) || (_c == 2)) //enter or clear, return to play
             {
                 restoreDisplayState();
                 return;
@@ -387,9 +387,7 @@ void FrontEnd::fen(std::string b)
                     i=i+4;
                 }
                 else
-				{
 					send_display("-END");
-				}
             }
         }
         cpuBreak();
@@ -412,6 +410,11 @@ void FrontEnd::level(int &sd) //set level
         if(_b)
         {
             int _c = get_button();
+			if(_c == 2) //clear
+			{
+				restoreDisplayState();
+                return;
+			}
             if(_c == 3) //enter
             {
                 send_engine("sd " + std::to_string(sd)); //set new level
