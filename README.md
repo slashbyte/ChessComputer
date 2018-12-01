@@ -1,11 +1,9 @@
 # PI Chess Computer
 Modeled after the "Chess Challenger" made in 1978.
-
 This PI powered, retro themed, build is an,
-
 open source hardware design capable of running an up to date chess engine, Stockfish.
 
-Computer chess clubs BEWARE!
+###Computer chess clubs BEWARE!
 
 ![GitHub Logo](/assembly/images/assembly01.png)
 
