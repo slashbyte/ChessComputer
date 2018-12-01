@@ -15,5 +15,5 @@ This project is licensed under the MIT License
 (https://opensource.org/licenses/MIT)
 ## Acknowledgments
 * Thanks Science
-* and Adafruit!
-
+* and Adafruit
+* and Ponoko (Great fab house)
