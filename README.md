@@ -8,12 +8,15 @@ is an open source hardware design capable of running an up to date chess engine,
 
 ![GitHub Logo](/assembly/images/assembly01.png)
 
+![GitHub Logo](/photo/photo01.jpg)
+
 ## Authors
 * **Slash/Byte**
 ## License
 This project is licensed under the MIT License
 (https://opensource.org/licenses/MIT)
 ## Acknowledgments
-* Thanks Science
-* and Adafruit
-* and Ponoko (Great fab house)
+* Science
+* Adafruit
+* Ponoko (Great fab house)
+* Digikey
