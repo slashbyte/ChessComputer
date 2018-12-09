@@ -9,9 +9,9 @@ is an open source hardware design capable of running an up to date chess engine,
 ### Computer Chess Clubs, BEWARE!
 (Thats still a thing, right?)
 
-![GitHub Logo](/assembly/images/assembly01.png)
+![GitHub Logo](/assembly/images/assembly01.png){:height="50%" width="50%"}
 
-![GitHub Logo](/photo/ChessChallenger.gif)
+![GitHub Logo](/photo/ChessChallenger.gif){:height="50%" width="50%"}
 
 ## Authors
 * **Slash/Byte**
