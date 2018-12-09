@@ -11,7 +11,7 @@ is an open source hardware design capable of running an up to date chess engine,
 
 ![GitHub Logo](/assembly/images/assembly01.png)
 
-![GitHub Logo](/photo/ChessChallenger.gif){:class="img-responsive"}
+![GitHub Logo](/photo/ChessChallenger.gif){:height="36px" width="36px"}.
 
 ## Authors
 * **Slash/Byte**
