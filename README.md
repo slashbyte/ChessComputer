@@ -10,8 +10,8 @@ is an open source hardware design capable of running an up to date chess engine,
 (Thats still a thing, right?)
 
 <p align="center">
-<img src="photo/ChessChallenger.gif" width="50%" >
-<img src="assembly/images/assembly02.png" width="50%" >
+<img src="photo/ChessChallenger.gif" width="25%" >
+<img src="assembly/images/assembly02.png" width="25%" >
 </p>
 
 ## Authors
