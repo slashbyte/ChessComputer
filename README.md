@@ -15,7 +15,7 @@ is an open source hardware design capable of running an up to date chess engine,
 </p>
 
 ## Authors
-* **Slash/Byte**
+* **Slash/Byte** (slashqpbyte@gmail.com)
 ## License
 This project is licensed under the MIT License
 (https://opensource.org/licenses/MIT)
